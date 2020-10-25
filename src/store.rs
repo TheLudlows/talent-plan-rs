@@ -1,8 +1,10 @@
 use std::collections::HashMap;
-use std::io::{BufReader, BufWriter, Error, Seek, SeekFrom};
+use std::io::{BufReader, BufWriter, Error, Seek, SeekFrom, Write};
 use std::fs::{File, create_dir_all, OpenOptions};
 use std::path::{PathBuf, Path};
+use serde::{Deserialize, Serialize};
 use crate::{DBEngine};
+use crate::store::Op::Set;
 
 pub struct KvStore{
     index:HashMap<String,Pos>,
@@ -36,6 +38,22 @@ impl Writer {
             pos
         }
     }
+}
+impl Write for Writer {
+    fn write(&mut self, buf: &[u8]) -> Result<usize,Error> {
+        let len = self.file_writer.write(buf)?;
+        self.pos+=len as u64;
+        Ok(len)
+    }
+
+    fn flush(&mut self) -> Result<(),Error> {
+        self.file_writer.flush()
+    }
+}
+#[derive(Serialize,Deserialize)]
+pub enum  Op{
+    Set{key:String,value:String},
+    Remove{key:String}
 }
 
 struct BufReaderWithPos {
@@ -75,9 +93,19 @@ impl KvStore {
 }
 
 impl DBEngine for KvStore{
-
-    fn set() {
-        unimplemented!()
+    fn set(&mut self,key:String,value:String) -> Result<(),Error>{
+        let op = Set {key,value};
+        let off = self.writer.pos;
+        serde_json::to_writer(&mut self.writer,&op);
+        self.writer.flush()?;
+        if let Set{key,..} = op {
+            self.index.insert(key,Pos{
+                file_id: self.cur_file,
+                off,
+                size:self.writer.pos - off
+            });
+        }
+        Ok(())
     }
 
     fn get() {
