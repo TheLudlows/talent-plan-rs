@@ -4,7 +4,7 @@ use std::io::Error;
 pub mod store;
 
 pub trait DBEngine {
-    fn set(&mut self,key:String,value:String)->Result<(),Error>;
-    fn get();
+    fn set(&mut self, key: String, value: String) -> Result<(), Error>;
+    fn get(&self, key: String) -> Option<String>;
     fn remove();
 }
