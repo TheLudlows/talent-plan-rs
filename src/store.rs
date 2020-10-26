@@ -1,36 +1,46 @@
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::io::{BufReader, BufWriter, Error, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Error, Read, Seek, SeekFrom, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use serde_json::Deserializer;
 
 use crate::DBEngine;
-use crate::store::Op::Set;
+use crate::store::Op::{Remove, Set};
 
 pub struct KvStore {
     index: HashMap<String, Pos>,
-    reader_index: HashMap<u32, BufReaderWithPos>,
-    writer: Writer,
-    path: PathBuf,
-    cur_file: u32,
+    reader: BufferReader,
+    writer: BufferWriter,
+    path: String,
     // remove to compacted
     un_del: u64,
 }
 
 // one line data index
 pub struct Pos {
-    file_id: u32,
     off: u64,
     size: u64,
 }
 
-pub struct Writer {
+impl Pos {
+    pub fn new(off: u64, size: u64) -> Self {
+        Pos {
+            off,
+            size,
+        }
+    }
+}
+
+pub struct BufferWriter {
     file_writer: BufWriter<File>,
+    // 当前长度
     pos: u64,
 }
 
-impl Writer {
+impl BufferWriter {
     pub fn new(p: &PathBuf) -> Self {
         let mut file = OpenOptions::new().append(true)
             .read(true)
@@ -45,7 +55,7 @@ impl Writer {
     }
 }
 
-impl Write for Writer {
+impl Write for BufferWriter {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
         let len = self.file_writer.write(buf)?;
         self.pos += len as u64;
@@ -63,15 +73,16 @@ pub enum Op {
     Remove { key: String },
 }
 
-struct BufReaderWithPos {
+struct BufferReader {
     reader: BufReader<File>,
+    // 文件最大长度
     pos: u64,
 }
 
-impl BufReaderWithPos {
+impl BufferReader {
     pub fn new(p: &PathBuf) -> Self {
         let mut file = File::open(p).unwrap();
-        let pos = file.seek(SeekFrom::Start(0)).unwrap();
+        let pos = file.seek(SeekFrom::End(0)).unwrap();
         let reader = BufReader::new(file);
         Self {
             reader,
@@ -80,24 +91,60 @@ impl BufReaderWithPos {
     }
 }
 
-impl KvStore {
-    pub fn open(path: String) -> Result<KvStore, Error> {
-        let p = PathBuf::from(path);
-        create_dir_all(&p)?;
-        let cur = &p.as_path().join("1");
-        let writer = Writer::new(cur);
-        let reader = BufReaderWithPos::new(cur);
-        let mut reader_index: HashMap<u32, BufReaderWithPos> = HashMap::new();
-        reader_index.insert(1, reader);
+impl Read for BufferReader {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let len = self.reader.read(buf)?;
+        self.pos += len as u64;
+        Ok(len)
+    }
+}
 
-        Ok(Self {
+impl Seek for BufferReader {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        Ok(self.reader.seek(pos)?)
+    }
+}
+
+impl KvStore {
+    pub fn open(all_path: String) -> Result<KvStore, Error> {
+        let i = all_path.rfind("/").unwrap();
+
+        let sub_path = all_path.split_at(i + 1);
+        let path_name = sub_path.0;
+        let file = PathBuf::from(&all_path);
+        create_dir_all(PathBuf::from(path_name))?;
+        let writer = BufferWriter::new(&file);
+        let reader = BufferReader::new(&file);
+        let mut kvStore = Self {
             index: Default::default(),
-            reader_index,
+            reader,
             writer,
-            path: p,
-            cur_file: 1,
+            path: all_path,
             un_del: 0,
-        })
+        };
+        kvStore.recover();
+        Ok(kvStore)
+    }
+
+    pub fn recover(&mut self) {
+        let reader = &mut self.reader;
+        reader.seek(SeekFrom::Start(0));
+        let reader = reader.take(reader.pos);
+        let mut start = 0;
+        let mut stream = Deserializer::from_reader(reader).into_iter::<Op>();
+        while let Some(op) = stream.next() {
+            let off = stream.byte_offset();
+            match op.unwrap() {
+                Set { key, .. } => {
+                    self.index.insert(key, Pos::new(start, (off as u64 - start as u64)));
+                },
+                Remove { key } => {
+                    self.index.remove(&key);
+                }
+                _ => {}
+            }
+            start = off as u64;
+        }
     }
 }
 
@@ -109,7 +156,6 @@ impl DBEngine for KvStore {
         self.writer.flush()?;
         if let Set { key, .. } = op {
             if let Some(old) = self.index.insert(key, Pos {
-                file_id: self.cur_file,
                 off,
                 size: self.writer.pos - off,
             }) {
@@ -122,12 +168,15 @@ impl DBEngine for KvStore {
         Ok(())
     }
 
-    fn get(&self, key: String) -> Option<String> {
-       if let Some(pos) = self.index.get(&key) {
-           if let Some(rder) = self.reader_index.get(&pos.file_id) {
-               reader.reader.
-           }
-       }
+    fn get(&mut self, key: String) -> Option<String> {
+        if let Some(pos) = self.index.get(&key) {
+            let reader = &mut self.reader;
+            reader.seek(SeekFrom::Start(pos.off));
+            let reader = reader.take(pos.size);
+            if let Set { key, value } = serde_json::from_reader(reader).unwrap() {
+                return Some(value)
+            }
+        }
         None
     }
 
