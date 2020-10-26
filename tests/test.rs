@@ -2,6 +2,7 @@ use rs_kv::store::KvStore;
 use rs_kv::DBEngine;
 use std::env::current_dir;
 use rs_kv::server::DBServer;
+use rs_kv::client::DBClient;
 
 #[test]
 fn test() {
@@ -22,5 +23,13 @@ fn test_string() {
 
 #[test]
 fn test_server() {
-    DBServer::start("/Users/liuchao56/data/2.log","localhost:8888");
+    DBServer::start("/home/four/data/2.log","localhost:8888");
+}
+
+#[test]
+fn test_client() {
+    let mut client = DBClient::connect("localhost:8888").unwrap();
+    client.set("1".to_string(),"2".to_string());
+    let res = client.get("1".to_string());
+    println!("{}",res.unwrap())
 }

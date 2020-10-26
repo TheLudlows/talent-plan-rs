@@ -32,13 +32,18 @@ impl DBServer {
         for req in req_reader {
             let req = req.unwrap();
             debug!("Receive request from {}: {:?}", peer_addr, req);
+            println!("req:{:?}",req);
             match req {
                 Request::Get { key } => match engine.get(key) {
                     Some(value) => {
+                        println!("find vale {}",value);
                         serde_json::to_writer(&mut writer, &GetResponse::Ok(value))?;
                         writer.flush()?;
+                    }
+                    _ => {
+                        serde_json::to_writer(&mut writer, &GetResponse::Err("null".to_string()))?;
+                        writer.flush()?;
                     },
-                    _ => {},
                 },
                 Request::Set { key, value } => match engine.set(key, value) {
                     Ok(_) => {},
@@ -50,6 +55,7 @@ impl DBServer {
                 _ => {}
             }
         }
+        println!("flush over");
         Ok(())
     }
 }
