@@ -14,7 +14,7 @@ pub struct KvStore {
     index: HashMap<String, Pos>,
     reader: BufferReader,
     writer: BufferWriter,
-    path: String,
+    path: &'static str,
     // remove to compacted
     un_del: u64,
 }
@@ -106,12 +106,12 @@ impl Seek for BufferReader {
 }
 
 impl KvStore {
-    pub fn open(all_path: String) -> Result<KvStore, Error> {
+    pub fn open(all_path: &'static str) -> Result<KvStore, Error> {
         let i = all_path.rfind("/").unwrap();
 
         let sub_path = all_path.split_at(i + 1);
         let path_name = sub_path.0;
-        let file = PathBuf::from(&all_path);
+        let file = PathBuf::from(all_path);
         create_dir_all(PathBuf::from(path_name))?;
         let writer = BufferWriter::new(&file);
         let reader = BufferReader::new(&file);
