@@ -1,6 +1,6 @@
-use std::io::{Error, BufReader, BufWriter, Read, Write};
+use std::io::{Error, BufReader, BufWriter, Write};
 use std::net::TcpStream;
-use crate::common::{Request, SetResponse, GetResponse};
+use crate::common::{Request, GetResponse};
 use serde_json::Deserializer;
 use serde::Deserialize;
 
@@ -22,8 +22,8 @@ impl DBClient {
     }
 
     pub fn set(&mut self, key:String, value:String) -> Result<(),Error>{
-        serde_json::to_writer(&mut self.writer,&Request::Set {key,value});
-        self.writer.flush();
+        serde_json::to_writer(&mut self.writer,&Request::Set {key,value})?;
+        self.writer.flush()?;
        /* if let SetResponse::Err(e) = serde_json::from_reader(&mut self.reader).unwrap(){
             error!("err")
         }*/
@@ -31,7 +31,7 @@ impl DBClient {
     }
 
     pub fn get(&mut self, key:String) -> Option<String> {
-        serde_json::to_writer(&mut self.writer,&Request::Get {key});
+        serde_json::to_writer(&mut self.writer,&Request::Get {key}).unwrap();
         self.writer.flush().unwrap();
         let mut stream = Deserializer::from_reader(&mut self.reader);
         if let GetResponse::Ok(value) =  GetResponse::deserialize(&mut stream).unwrap(){

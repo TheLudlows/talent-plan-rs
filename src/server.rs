@@ -16,7 +16,7 @@ impl DBServer {
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    DBServer::serve(&mut db,stream);
+                    DBServer::serve(&mut db,stream).unwrap();
                 }
                 Err(_) => {}
             }

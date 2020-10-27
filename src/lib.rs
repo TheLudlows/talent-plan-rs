@@ -6,6 +6,7 @@ pub mod store;
 pub mod server;
 pub mod client;
 pub mod common;
+pub mod threadpool;
 
 pub trait DBEngine {
     fn set(&mut self, key: String, value: String) -> Result<(), Error>;

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::{BufReader, BufWriter, Error, Read, Seek, SeekFrom, Write};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
@@ -14,7 +14,6 @@ pub struct KvStore {
     index: HashMap<String, Pos>,
     reader: BufferReader,
     writer: BufferWriter,
-    path: &'static str,
     // remove to compacted
     un_del: u64,
 }
@@ -42,6 +41,7 @@ pub struct BufferWriter {
 
 impl BufferWriter {
     pub fn new(p: &PathBuf) -> Self {
+
         let mut file = OpenOptions::new().append(true)
             .read(true)
             .write(true)
@@ -115,20 +115,20 @@ impl KvStore {
         create_dir_all(PathBuf::from(path_name))?;
         let writer = BufferWriter::new(&file);
         let reader = BufferReader::new(&file);
-        let mut kvStore = Self {
+        let mut kv_store = Self {
             index: Default::default(),
             reader,
             writer,
-            path: all_path,
             un_del: 0,
         };
-        kvStore.recover();
-        Ok(kvStore)
+        kv_store.recover();
+        Ok(kv_store)
     }
 
     pub fn recover(&mut self) {
         let reader = &mut self.reader;
-        reader.seek(SeekFrom::Start(0));
+
+        reader.seek(SeekFrom::Start(0)).unwrap();
         let reader = reader.take(reader.pos);
         let mut start = 0;
         let mut stream = Deserializer::from_reader(reader).into_iter::<Op>();
@@ -136,7 +136,7 @@ impl KvStore {
             let off = stream.byte_offset();
             match op.unwrap() {
                 Set { key, .. } => {
-                    self.index.insert(key, Pos::new(start, (off as u64 - start as u64)));
+                    self.index.insert(key, Pos::new(start, off as u64 - start as u64));
                 },
                 Remove { key } => {
                     self.index.remove(&key);
@@ -152,7 +152,7 @@ impl DBEngine for KvStore {
     fn set(&mut self, key: String, value: String) -> Result<(), Error> {
         let op = Set { key, value };
         let off = self.writer.pos;
-        serde_json::to_writer(&mut self.writer, &op);
+        serde_json::to_writer(&mut self.writer, &op)?;
         self.writer.flush()?;
         if let Set { key, .. } = op {
             if let Some(old) = self.index.insert(key, Pos {
@@ -171,9 +171,9 @@ impl DBEngine for KvStore {
     fn get(&mut self, key: String) -> Option<String> {
         if let Some(pos) = self.index.get(&key) {
             let reader = &mut self.reader;
-            reader.seek(SeekFrom::Start(pos.off));
+            reader.seek(SeekFrom::Start(pos.off)).unwrap();
             let reader = reader.take(pos.size);
-            if let Set { key, value } = serde_json::from_reader(reader).unwrap() {
+            if let Set { value, .. } = serde_json::from_reader(reader).unwrap() {
                 return Some(value)
             }
         }
