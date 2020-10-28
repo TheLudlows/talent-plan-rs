@@ -5,6 +5,8 @@ use crossbeam::channel::{self, Sender};
 trait ThreadPool {
     fn new(size: usize) -> Self;
     fn spawn<F: FnOnce() + Send + 'static>(&self, f: F);
+
+    fn spawn1(f:impl FnOnce() + Send);
 }
 
 pub struct MyThreadPool {
@@ -34,6 +36,10 @@ impl ThreadPool for MyThreadPool {
 
     fn spawn<F: FnOnce() + Send + 'static>(&self, f: F) {
         self.sender.send(Box::new(f)).unwrap();
+    }
+
+    fn spawn1(f: impl FnOnce() + Send) {
+        unimplemented!()
     }
 }
 
