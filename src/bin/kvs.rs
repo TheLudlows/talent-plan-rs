@@ -1,9 +1,10 @@
-use clap::{App, AppSettings, Arg, SubCommand};
 use std::process::exit;
+
+use clap::{App, AppSettings, Arg, SubCommand};
+
 use talent_plan_rs::kv::KvStore;
 
 fn main() {
-
     let mut store = KvStore::new();
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
@@ -42,7 +43,7 @@ fn main() {
         ("get", Some(_matches)) => {
             let v = store.get(_matches.value_of("KEY").expect("key miss").to_string())
                 .unwrap_or("".to_string());
-            println!("{}",v);
+            println!("{}", v);
         }
         ("rm", Some(_matches)) => {
             store.remove(_matches.value_of("KEY").expect("key miss").to_string());
