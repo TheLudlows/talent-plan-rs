@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 
-use talent_plan_rs::kv::KvStore;
+use talent_plan_rs::KvStore;
 
 fn main() {
     let mut store = KvStore::new();
@@ -42,6 +42,7 @@ fn main() {
         }
         ("get", Some(_matches)) => {
             let v = store.get(_matches.value_of("KEY").expect("key miss").to_string())
+                .unwrap()
                 .unwrap_or("".to_string());
             println!("{}", v);
         }
