@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-#[derive(Default)]
 pub struct KvStore {
     map: HashMap<String, String>,
 }

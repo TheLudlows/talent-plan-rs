@@ -1,7 +1,7 @@
 use assert_cmd::prelude::*;
 use predicates::str::contains;
 use std::process::Command;
-use talent_plan_rs::kv::KvStore;
+use talent_plan_rs::KvStore;
 
 // `kvs` with no args should exit with a non-zero code.
 #[test]
