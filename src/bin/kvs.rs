@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::{App, AppSettings, Arg, SubCommand};
 
-use talent_plan_rs::kv::KvStore;
+use talent_plan_rs::KvStore;
 
 fn main() {
     let mut store = KvStore::new();
