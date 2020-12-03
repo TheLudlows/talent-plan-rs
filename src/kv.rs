@@ -233,7 +233,7 @@ impl KvStore {
             serde_json::to_writer(&mut self.writer, &op)?;
             self.writer.flush()?;
             if self.un_compact > MAX_UN_COMPACT {
-                // todo compact
+                Self::compact(self);
             }
             //println!("{:?}",&self.index);
             Ok(())
