@@ -1,5 +1,5 @@
-use crate:: Result;
 use crate::error::KvsError;
+use crate::Result;
 
 use super::ThreadPool;
 

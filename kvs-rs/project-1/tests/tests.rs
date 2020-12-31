@@ -1,6 +1,8 @@
+use std::process::Command;
+
 use assert_cmd::prelude::*;
 use predicates::str::contains;
-use std::process::Command;
+
 use talent_plan_rs::KvStore;
 
 // `kvs` with no args should exit with a non-zero code.
@@ -27,7 +29,7 @@ fn cli_get() {
         .args(&["get", "key1"])
         .assert()
         .success();
-        //.stderr(contains("unimplemented"));
+    //.stderr(contains("unimplemented"));
 }
 
 // `kvs set <KEY> <VALUE>` should print "unimplemented" to stderr and exit with non-zero code
@@ -38,8 +40,8 @@ fn cli_set() {
         .args(&["set", "key1", "value1"])
         .assert()
         .success();
-        //.failure()
-        //.stderr(contains("unimplemented"));
+    //.failure()
+    //.stderr(contains("unimplemented"));
 }
 
 // `kvs rm <KEY>` should print "unimplemented" to stderr and exit with non-zero code
@@ -50,8 +52,8 @@ fn cli_rm() {
         .args(&["rm", "key1"])
         .assert()
         .success();
-        //.failure()
-        //.stderr(contains("unimplemented"));
+    //.failure()
+    //.stderr(contains("unimplemented"));
 }
 
 #[test]

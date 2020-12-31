@@ -1,8 +1,10 @@
-use kvs::{KvStore, KvsEngine, Result};
 use std::sync::{Arc, Barrier};
 use std::thread;
+
 use tempfile::TempDir;
 use walkdir::WalkDir;
+
+use kvs::{KvsEngine, KvStore, Result};
 
 // Should get previously stored value
 #[test]

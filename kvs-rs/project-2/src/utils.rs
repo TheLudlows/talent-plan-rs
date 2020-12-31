@@ -1,5 +1,6 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
+
 use super::Result;
 
 const SUFFIX: &str = ".log";

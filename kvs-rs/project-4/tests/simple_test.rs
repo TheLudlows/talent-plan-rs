@@ -21,5 +21,4 @@ fn set_get<DB: KvsEngine>(db: &mut DB) {
     for i in 1..1 << 12 {
         db.set(format!("{}", i), format!("{}", i)).unwrap();
     }
-
 }

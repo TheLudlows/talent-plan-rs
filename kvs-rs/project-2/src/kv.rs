@@ -1,6 +1,6 @@
+use std::{fs, io};
 use std::collections::HashMap;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::{io, fs};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
@@ -9,7 +9,7 @@ use serde_json::Deserializer;
 
 use crate::error::KvsError::KeyNotFound;
 use crate::kv::Op::{Remove, Set};
-use crate::utils::{ls_logs, format_path, del_file};
+use crate::utils::{del_file, format_path, ls_logs};
 
 use super::Result;
 
@@ -17,7 +17,7 @@ use super::Result;
 /// get 1.read index 2.read file
 /// remove 1.remove index 2.append log 3.add unCompact count 4.if ness compact 5.add cur gen
 
-const MAX_UN_COMPACT: u64 = 1024*1024;
+const MAX_UN_COMPACT: u64 = 1024 * 1024;
 
 #[derive(Debug)]
 pub struct KvStore {
@@ -131,8 +131,8 @@ impl KvStore {
             un_compact += Self::load_file(path, &mut index, &mut readers, *id)?;
         }
         let cur_file_id = log_ids.last().unwrap_or(&0) + 1;
-        let writer =BufferWriter::new(format_path(path, cur_file_id))?;
-        readers.insert(cur_file_id,BufferReader::new(format_path(path, cur_file_id))?);
+        let writer = BufferWriter::new(format_path(path, cur_file_id))?;
+        readers.insert(cur_file_id, BufferReader::new(format_path(path, cur_file_id))?);
         Ok(Self {
             path: path.to_path_buf(),
             index,
@@ -161,10 +161,10 @@ impl KvStore {
             }
         }
         self.readers.keys().for_each(|id| {
-            del_file(format_path(self.path.as_path(),*id));
+            del_file(format_path(self.path.as_path(), *id));
         });
         self.readers.clear();
-        self.readers.insert(self.cur_file_id,BufferReader::new(format_path(path, self.cur_file_id))?);
+        self.readers.insert(self.cur_file_id, BufferReader::new(format_path(path, self.cur_file_id))?);
 
         self.index = new_index;
         self.writer = new_writer;
@@ -184,7 +184,7 @@ impl KvStore {
             match op? {
                 Set { key, .. } => {
                     index.insert(key, Pos::new(id, start, off - start));
-                },
+                }
                 Remove { key } => {
                     index.remove(&key);
                     un_compact += off - start;
@@ -198,7 +198,7 @@ impl KvStore {
     }
 
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let op = Set { key:key.clone(), value };
+        let op = Set { key: key.clone(), value };
         let off = self.writer.pos;
         serde_json::to_writer(&mut self.writer, &op)?;
         self.writer.flush()?;
@@ -217,7 +217,7 @@ impl KvStore {
             reader.seek(SeekFrom::Start(pos.off))?;
             let mut reader = reader.take(pos.size);
             if let Set { value, .. } = serde_json::from_reader(&mut reader)? {
-                return Ok(Some(value))
+                return Ok(Some(value));
             }
         }
         Ok(None)

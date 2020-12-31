@@ -13,7 +13,7 @@ pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
     pool: P,
 }
 
-impl<E: KvsEngine  + Clone, P: ThreadPool> KvsServer<E, P> {
+impl<E: KvsEngine + Clone, P: ThreadPool> KvsServer<E, P> {
     pub fn new(engine: E, pool: P) -> Self {
         KvsServer {
             engine,
@@ -37,7 +37,7 @@ impl<E: KvsEngine  + Clone, P: ThreadPool> KvsServer<E, P> {
     }
 }
 
-fn  server <E: KvsEngine> (engine: E, stream: TcpStream) -> Result<()> {
+fn server<E: KvsEngine>(engine: E, stream: TcpStream) -> Result<()> {
     let addr = stream.local_addr()?;
     println!("connect from addr {}", addr);
 

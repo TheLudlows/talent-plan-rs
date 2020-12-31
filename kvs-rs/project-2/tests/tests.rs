@@ -1,10 +1,13 @@
+use std::process::Command;
+
 use assert_cmd::prelude::*;
 use predicates::ord::eq;
 use predicates::str::{contains, is_empty, PredicateStrExt};
-use std::process::Command;
 use tempfile::TempDir;
 use walkdir::WalkDir;
-use talent_plan_rs::{Result, KvStore};
+
+use talent_plan_rs::{KvStore, Result};
+
 // `kvs` with no args should exit with a non-zero code.
 #[test]
 fn cli_no_args() {

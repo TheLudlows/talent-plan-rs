@@ -26,5 +26,4 @@ fn set_get<DB: KvsEngine>(db: &mut DB) {
         let r = db.get(format!("{}", i)).unwrap();
         assert_eq!(r, Some(format!("{}", i)));
     }
-
 }

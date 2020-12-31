@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::Deserializer;
 
 use crate::error::KvsError;
-use crate::msg::Request::{Get, Set, Remove};
+use crate::msg::Request::{Get, Remove, Set};
 use crate::msg::Response;
 use crate::Result;
 

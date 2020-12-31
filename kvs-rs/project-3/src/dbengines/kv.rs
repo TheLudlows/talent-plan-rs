@@ -3,14 +3,15 @@ use std::fs::{create_dir_all, File, OpenOptions};
 use std::io;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+
 use serde_json::Deserializer;
 
 use crate::{KvsEngine, Result};
+use crate::dbengines::common::*;
+use crate::dbengines::common::Pos;
 use crate::dbengines::kv::Op::{Remove, Set};
 use crate::error::KvsError::KeyNotFound;
 use crate::utils::{del_file, format_path, ls_logs};
-use crate::dbengines::common::*;
-use crate::dbengines::common::Pos;
 
 /// set 1.add index 2.append log
 /// get 1.read index 2.read file
@@ -31,7 +32,7 @@ pub struct KvStore {
 #[derive(Debug)]
 pub struct BufferWriter {
     file_writer: BufWriter<File>,
-    file_pos: u64
+    file_pos: u64,
 }
 
 impl BufferWriter {

@@ -1,5 +1,6 @@
-use failure::Fail;
 use std::io;
+
+use failure::Fail;
 
 /// Error type for kvs.
 #[derive(Fail, Debug)]

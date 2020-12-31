@@ -1,5 +1,5 @@
-
 use serde::{Deserialize, Serialize};
+
 /// to write in file
 #[derive(Serialize, Deserialize)]
 pub enum Op {

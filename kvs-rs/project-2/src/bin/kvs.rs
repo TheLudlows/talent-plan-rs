@@ -1,9 +1,10 @@
+use std::env::current_dir;
+use std::process::exit;
+
 use clap::{App, AppSettings, Arg, SubCommand};
 
 use talent_plan_rs::KvStore;
-use std::env::current_dir;
 use talent_plan_rs::Result;
-use std::process::exit;
 
 fn main() -> Result<()> {
     let matches = App::new(env!("CARGO_PKG_NAME"))
@@ -48,7 +49,7 @@ fn main() -> Result<()> {
         }
         ("rm", Some(_matches)) => {
             match store.remove(_matches.value_of("KEY").unwrap_or("key miss").to_string()) {
-                Ok(()) =>{}
+                Ok(()) => {}
                 Err(_) => {
                     println!("Key not found");
                     exit(1);
