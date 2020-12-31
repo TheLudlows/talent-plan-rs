@@ -1,11 +1,11 @@
-use std::process::exit;
-
 use clap::{App, AppSettings, Arg, SubCommand};
 
 use talent_plan_rs::KvStore;
+use std::env::current_dir;
+use talent_plan_rs::Result;
+use std::process::exit;
 
-fn main() {
-    let mut store = KvStore::new();
+fn main() -> Result<()> {
     let matches = App::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
@@ -34,7 +34,7 @@ fn main() {
                 .arg(Arg::with_name("KEY").help("A string key").required(true)),
         )
         .get_matches();
-
+    let mut store = KvStore::open(current_dir()?.as_path())?;
     match matches.subcommand() {
         ("set", Some(_matches)) => {
             store.set(_matches.value_of("KEY").expect("key miss").to_string(),
@@ -42,12 +42,20 @@ fn main() {
         }
         ("get", Some(_matches)) => {
             let v = store.get(_matches.value_of("KEY").expect("key miss").to_string())
-                .unwrap_or("".to_string());
+                .unwrap()
+                .unwrap_or("Key not found".to_string());
             println!("{}", v);
         }
         ("rm", Some(_matches)) => {
-            store.remove(_matches.value_of("KEY").expect("key miss").to_string());
+            match store.remove(_matches.value_of("KEY").unwrap_or("key miss").to_string()) {
+                Ok(()) =>{}
+                Err(_) => {
+                    println!("Key not found");
+                    exit(1);
+                }
+            }
         }
         _ => unreachable!(),
     }
+    Ok(())
 }
