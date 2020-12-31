@@ -6,63 +6,70 @@ use serde_json::Deserializer;
 use crate::KvsEngine;
 use crate::msg::{Request, Response};
 use crate::Result;
+use crate::thread_pool::ThreadPool;
 
-pub struct KvsServer<E: KvsEngine> {
+pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
     engine: E,
+    pool: P,
 }
 
-impl<E: KvsEngine> KvsServer<E> {
-    pub fn new(engine: E) -> Self {
-        KvsServer { engine }
+impl<E: KvsEngine  + Clone, P: ThreadPool> KvsServer<E, P> {
+    pub fn new(engine: E, pool: P) -> Self {
+        KvsServer {
+            engine,
+            pool,
+        }
     }
 
-    pub fn run(mut self, addr: impl ToSocketAddrs) -> Result<()> {
+    pub fn run(self, addr: impl ToSocketAddrs) -> Result<()> {
         let tcp_listener = TcpListener::bind(addr)?;
         for stream in tcp_listener.incoming() {
-            match stream {
-                Ok(s) => {
-                    self.server(s)?;
-                }
-                Err(e) => eprintln!("connect err,{}", e),
-            };
+            let e = self.engine.clone();
+            self.pool.spawn(move ||
+                match stream {
+                    Ok(s) => {
+                        server(e, s).unwrap();
+                    }
+                    Err(e) => eprintln!("connect err,{}", e),
+                });
         }
         Ok(())
     }
+}
 
-    fn server(&mut self, stream: TcpStream) -> Result<()> {
-        let addr = stream.local_addr()?;
-        println!("connect from addr {}", addr);
+fn  server <E: KvsEngine> (engine: E, stream: TcpStream) -> Result<()> {
+    let addr = stream.local_addr()?;
+    println!("connect from addr {}", addr);
 
-        let reader = BufReader::new(&stream);
-        let mut writer = BufWriter::new(&stream);
-        let reqs = Deserializer::from_reader(reader).into_iter::<Request>();
+    let reader = BufReader::new(&stream);
+    let mut writer = BufWriter::new(&stream);
+    let reqs = Deserializer::from_reader(reader).into_iter::<Request>();
 
-        for req in reqs {
-            let req = req?;
-            let resp = match req {
-                Request::Get { key } => {
-                    match self.engine.get(key) {
-                        Ok(res) => Response::Get(res),
-                        Err(e) => Response::Err(format!("{:?}", e))
-                    }
+    for req in reqs {
+        let req = req?;
+        let resp = match req {
+            Request::Get { key } => {
+                match engine.get(key) {
+                    Ok(res) => Response::Get(res),
+                    Err(e) => Response::Err(format!("{:?}", e))
                 }
-                Request::Set { key, value } => {
-                    match self.engine.set(key, value.clone()) {
-                        Ok(()) => Response::Set(value),
-                        Err(e) => Response::Err(format!("{:?}", e))
-                    }
+            }
+            Request::Set { key, value } => {
+                match engine.set(key, value.clone()) {
+                    Ok(()) => Response::Set(value),
+                    Err(e) => Response::Err(format!("{:?}", e))
                 }
-                Request::Remove { key } => {
-                    match self.engine.remove(key) {
-                        Ok(()) => Response::Remove,
-                        Err(e) => Response::Err(format!("{:?}", e))
-                    }
+            }
+            Request::Remove { key } => {
+                match engine.remove(key) {
+                    Ok(()) => Response::Remove,
+                    Err(e) => Response::Err(format!("{:?}", e))
                 }
-            };
-            //println!("server process result {:?}",resp);
-            serde_json::to_writer(&mut writer, &resp)?;
-            writer.flush()?;
-        }
-        Ok(())
+            }
+        };
+        //println!("server process result {:?}",resp);
+        serde_json::to_writer(&mut writer, &resp)?;
+        writer.flush()?;
     }
+    Ok(())
 }

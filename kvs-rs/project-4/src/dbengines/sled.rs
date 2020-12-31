@@ -5,6 +5,7 @@ use sled::Db;
 use crate::{KvsEngine, Result};
 use crate::error::KvsError::KeyNotFound;
 
+#[derive(Clone, Debug)]
 pub struct SledKvsEngine(Db);
 
 impl SledKvsEngine {

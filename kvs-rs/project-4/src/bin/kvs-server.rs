@@ -12,6 +12,7 @@ use log::LevelFilter;
 use structopt::StructOpt;
 
 use kvs::*;
+use kvs::thread_pool::{RayonThreadPool, ThreadPool};
 
 const DEFAULT_LISTENING_ADDRESS: &str = "127.0.0.1:4000";
 const DEFAULT_ENGINE: Engine = Engine::kvs;
@@ -83,7 +84,7 @@ fn run(opt: Opt) -> Result<()> {
 }
 
 fn run_with_engine<E: KvsEngine>(engine: E, addr: SocketAddr) -> Result<()> {
-    let server = KvsServer::new(engine);
+    let server = KvsServer::new(engine,RayonThreadPool::new(4)?);
     server.run(addr)
 }
 

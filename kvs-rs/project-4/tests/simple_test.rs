@@ -22,9 +22,4 @@ fn set_get<DB: KvsEngine>(db: &mut DB) {
         db.set(format!("{}", i), format!("{}", i)).unwrap();
     }
 
-    for i in 1..1 << 12 {
-        let r = db.get(format!("{}", i)).unwrap();
-        assert_eq!(r, Some(format!("{}", i)));
-    }
-
 }
