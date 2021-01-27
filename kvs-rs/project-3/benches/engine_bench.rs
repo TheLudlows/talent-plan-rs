@@ -10,7 +10,7 @@ use tempfile::TempDir;
 
 use kvs::{KvsEngine, KvStore, SledKvsEngine};
 
-fn set_bench(c: &mut Criterion) {
+fn set_bench(c: &mut    Criterion) {
     let bench = ParameterizedBenchmark::new(
         "kvs",
         |b, _| {

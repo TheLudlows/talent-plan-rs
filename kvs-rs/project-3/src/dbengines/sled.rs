@@ -21,7 +21,7 @@ impl KvsEngine for SledKvsEngine {
     fn set(&mut self, key: String, value: String) -> Result<()> {
         let db = &self.0;
         db.insert(key, value.into_bytes())?;
-        //db.flush()?;
+        db.flush()?;
         Ok(())
     }
 

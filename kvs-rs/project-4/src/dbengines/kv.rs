@@ -28,6 +28,7 @@ const MAX_UN_COMPACT: u64 = 1024 * 1024;
 #[derive(Debug)]
 pub struct KvStore {
     path: Arc<PathBuf>,
+    // pub for debug
     pub index: Arc<SkipMap<String, Pos>>,
     reader: RefCell<HashMap<u32, BufferReader>>,
     writer: Arc<Mutex<RefCell<BufferWriter>>>,
