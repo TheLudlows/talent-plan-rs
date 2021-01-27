@@ -1,5 +1,5 @@
 #### talent-plan-rs
-首先非常PingCAP能组织一个非常专业的Rust课程，这对于Rust爱好者来说是一个非常棒学习的机会，再次感谢PingCAP为Rust做出的贡献。
+首先非常感谢PingCAP能组织一个非常专业的Rust课程，这对于Rust爱好者来说是一次非常好学习的机会，感谢PingCAP为Rust做出的贡献。
 
 Project1-4均已通过所有的测试用例，以下是我对Project1-4的实验简短总结，该课程持续的做了一个月左右，感谢Brian Anderson大神提供优秀的实现供学员参考。
 
