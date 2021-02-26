@@ -8,7 +8,7 @@ use crate::msg::{Request, Response};
 use crate::Result;
 use crate::thread_pool::ThreadPool;
 
-pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
+pub struct KvsServer<E: KvsEngine + 'static, P: ThreadPool> {
     engine: E,
     pool: P,
 }
