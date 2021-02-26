@@ -5,7 +5,7 @@ use std::io;
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering, AtomicU16};
 use std::sync::atomic::Ordering::{Relaxed, SeqCst};
 
 use crossbeam_skiplist::SkipMap;
@@ -30,9 +30,9 @@ pub struct KvStore {
     path: Arc<PathBuf>,
     // pub for debug
     pub index: Arc<SkipMap<String, Pos>>,
-    reader: RefCell<HashMap<u32, BufferReader>>,
+    reader: RefCell<HashMap<u16, BufferReader>>,
     writer: Arc<Mutex<RefCell<BufferWriter>>>,
-    cur_file_id: Arc<AtomicU32>,
+    cur_file_id: Arc<AtomicU16>,
     un_compact_size: Arc<AtomicU64>,
 }
 
@@ -52,7 +52,7 @@ impl Clone for KvStore {
 #[derive(Debug)]
 pub struct BufferWriter {
     file_writer: BufWriter<File>,
-    file_pos: u64,
+    file_pos: u32,
 }
 
 impl BufferWriter {
@@ -65,7 +65,7 @@ impl BufferWriter {
         let pos = file.seek(SeekFrom::Start(0)).unwrap();
         Ok(Self {
             file_writer: BufWriter::new(file),
-            file_pos: pos,
+            file_pos: pos as u32,
         })
     }
 }
@@ -73,7 +73,7 @@ impl BufferWriter {
 impl Write for BufferWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let len = self.file_writer.write(buf)?;
-        self.file_pos += len as u64;
+        self.file_pos += len as u32;
         Ok(len)
     }
 
@@ -120,7 +120,7 @@ impl KvStore {
         //println!("{:?}",log_ids);
         let mut un_compact = 0;
         for id in log_ids.iter() {
-            un_compact += Self::load_file(path, &index, &mut readers, *id)?;
+            un_compact += Self::load_file(path, &index, &mut readers, *id)? as u64;
         }
         let cur_file_id = log_ids.last().unwrap_or(&0) + 1;
         let writer = BufferWriter::new(format_path(path, cur_file_id))?;
@@ -130,7 +130,7 @@ impl KvStore {
             index: Arc::new(index),
             reader: RefCell::new(readers),
             writer: Arc::new(Mutex::new(RefCell::new(writer))),
-            cur_file_id: Arc::new(AtomicU32::new(cur_file_id)),
+            cur_file_id: Arc::new(AtomicU16::new(cur_file_id)),
             un_compact_size: Arc::new(AtomicU64::new(un_compact)),
         })
     }
@@ -143,13 +143,13 @@ impl KvStore {
             let (key, pos) = (entry.key(), entry.value());
             let mut reader_map = self.reader.borrow_mut();
             let reader = reader_map.entry(pos.id).or_insert(BufferReader::new(format_path(&self.path, pos.id))?);
-            reader.seek(SeekFrom::Start(pos.off))?;
-            let mut reader = reader.take(pos.size);
+            reader.seek(SeekFrom::Start(pos.off as u64))?;
+            let mut reader = reader.take(pos.size  as u64);
             if let Set { value, .. } = serde_json::from_reader(&mut reader)? {
                 let op = Set { key: key.clone(), value };
                 let off = new_writer.file_pos;
                 serde_json::to_writer(&mut new_writer, &op)?;
-                self.index.insert(key.clone(), Pos { id: cur_file_id, off, size: new_writer.file_pos - off });
+                self.index.insert(key.clone(), Pos { id: cur_file_id, off, size: (new_writer.file_pos - off) as u16 });
             }
         }
         new_writer.flush()?;
@@ -166,21 +166,21 @@ impl KvStore {
 
     /// load file to index
     /// return the un compact size
-    fn load_file(path: &Path, index: &SkipMap<String, Pos>, readers: &mut HashMap<u32, BufferReader>, id: u32) -> Result<u64> {
+    fn load_file(path: &Path, index: &SkipMap<String, Pos>, readers: &mut HashMap<u16, BufferReader>, id: u16) -> Result<u64> {
         let mut reader = BufferReader::new(format_path(path, id))?;
         reader.seek(SeekFrom::Start(0))?;
-        let mut start = 0;
-        let mut un_compact = 0;
+        let mut start :u32 = 0;
+        let mut un_compact : u64 = 0;
         let mut stream = Deserializer::from_reader(&mut reader).into_iter::<Op>();
         while let Some(op) = stream.next() {
-            let off = stream.byte_offset() as u64;
+            let off = stream.byte_offset() as u32;
             match op? {
                 Set { key, .. } => {
-                    index.insert(key, Pos::new(id, start, off - start));
+                    index.insert(key, Pos::new(id, start, (off - start) as u16));
                 }
                 Remove { key } => {
                     index.remove(&key);
-                    un_compact += off - start;
+                    un_compact += (off - start) as u64;
                 }
             }
             start = off;
@@ -202,9 +202,9 @@ impl KvsEngine for KvStore {
         serde_json::to_writer(&mut *writer, &op)?;
         writer.flush()?;
         if let Some(old) = self.index.get(&key) {
-            self.un_compact_size.fetch_add(old.value().size, SeqCst);
+            self.un_compact_size.fetch_add(old.value().size as u64, SeqCst);
         }
-        self.index.insert(key, Pos { id: self.cur_file_id.load(Ordering::Relaxed), off, size: writer.file_pos - off });
+        self.index.insert(key, Pos { id: self.cur_file_id.load(Ordering::Relaxed), off, size: (writer.file_pos - off) as u16 });
         if self.un_compact_size.load(Ordering::Relaxed) > MAX_UN_COMPACT {
             *writer = self.compact()?;
         }
@@ -216,8 +216,8 @@ impl KvsEngine for KvStore {
             let pos = entry.value();
             let mut reader_map = self.reader.borrow_mut();
             let reader = reader_map.entry(pos.id).or_insert(BufferReader::new(format_path(&self.path, pos.id))?);
-            reader.seek(SeekFrom::Start(pos.off))?;
-            let mut reader = reader.take(pos.size);
+            reader.seek(SeekFrom::Start(pos.off as u64))?;
+            let mut reader = reader.take(pos.size as u64);
             if let Set { value, .. } = serde_json::from_reader(&mut reader)? {
                 return Ok(Some(value));
             }
@@ -231,7 +231,7 @@ impl KvsEngine for KvStore {
         let mut writer = writer_ref.borrow_mut();
         if let Some(entry) = self.index.remove(&key) {
             // rm index
-            self.un_compact_size.fetch_add(entry.value().size, Ordering::SeqCst);
+            self.un_compact_size.fetch_add(entry.value().size as u64, Ordering::SeqCst);
             // append rm log
             let op = Remove { key };
             serde_json::to_writer(&mut *writer, &op)?;

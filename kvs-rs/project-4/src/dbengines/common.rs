@@ -7,16 +7,16 @@ pub enum Op {
     Remove { key: String },
 }
 
-/// one line data index
+/// one line data index, TODO to in u64 ,key v spit to store
 #[derive(Debug)]
 pub struct Pos {
-    pub id: u32,
-    pub off: u64,
-    pub size: u64,
+    pub id: u16,
+    pub off: u32,
+    pub size: u16,
 }
 
 impl Pos {
-    pub fn new(id: u32, off: u64, size: u64) -> Self {
+    pub fn new(id: u16, off: u32, size: u16) -> Self {
         Pos { id, off, size }
     }
 }
