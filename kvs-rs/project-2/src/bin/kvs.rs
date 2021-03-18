@@ -39,7 +39,7 @@ fn main() -> Result<()> {
     match matches.subcommand() {
         ("set", Some(_matches)) => {
             store.set(_matches.value_of("KEY").expect("key miss").to_string(),
-                      _matches.value_of("VALUE").expect("value miss").to_string());
+                      _matches.value_of("VALUE").expect("value miss").to_string())?;
         }
         ("get", Some(_matches)) => {
             let v = store.get(_matches.value_of("KEY").expect("key miss").to_string())

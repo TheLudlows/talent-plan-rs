@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use super::Result;
 
 const SUFFIX: &str = ".log";
-
 pub fn ls_logs(path: &Path) -> Vec<u32> {
     let mut v = path.read_dir().unwrap().into_iter()
         .map(|p| p.unwrap().file_name().to_str().unwrap().to_string())
